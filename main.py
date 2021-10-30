@@ -1,5 +1,6 @@
 import sys
 import time
+import requests
 
 from PyQt5.QtCore import Qt, QThread
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QDialog
@@ -37,26 +38,28 @@ class LoginScreen(QDialog):
 		
 		# Button to handle login
 		self.loginButton.clicked.connect(self.handleLogin)
-		
-	# def showMainWindow(self, checked):
-	# 	if self.w is None:
-	# 		self.w = MainWindow()
-	# 		self.w.show()
-
-	# 	else:
-	# 		self.w.close()  # Close window.
-	# 		self.w = None  # Discard reference.
 
 
 	# Function to handle login
 	def handleLogin(self, checked):
-		if (self.username.text() == "username" and self.password.text() == "password"):
+		url = "http://localhost:5000/login"		
+		loginData = {
+			'username': self.username.text(),
+			'password': self.password.text()
+		}
+		r = requests.get(url, data = loginData)
+
+		if r.status_code == 200:
 			print("Login successul!")
 			self.accept()
 		else:
 			QMessageBox.warning(self, 'Error', 'Wrong username or password')
 
-# implementar servidor
+		# if (self.username.text() == "username" and self.password.text() == "password"):
+		# 	print("Login successul!")
+		# 	self.accept()
+		# else:
+		# 	QMessageBox.warning(self, 'Error', 'Wrong username or password')
 
 # tela principal
 # botão para seleção do arquivo
@@ -90,7 +93,7 @@ class MainWindow(QWidget):
 
 		uploadLayout = QGridLayout()
 		uploadLayout.addWidget(QLabel("File name"), 0, 0)
-		uploadLayout.addWidget(QLabel("Upload progress"), 0, 1)
+		uploadLayout.addWidget(QLabel("Progress"), 0, 1)
 		uploadLayout.addWidget(QLabel("Cancel upload"), 0, 2)
 
 		uploadLayout.addWidget(self.contents, 1, 0)
@@ -119,10 +122,25 @@ class MainWindow(QWidget):
 
 	def uploadFile(self):
 		print("Upload button clicked")
-	
-		for file in self.filenames:
-			print(file[0])
-			self.progBar.setValue(100)
+		
+		url = "http://localhost:5000/upload"
+		uploadData = {
+			'file': self.filenames[-1][0]
+		}
+		print(self.filenames)
+		# r = requests.get(url, data = loginData)
+		print(uploadData)
+		r = requests.post(url, data = uploadData)
+
+		# if r.status_code == 200:
+		# 	print("Login successul!")
+		# 	self.accept()
+		# else:
+		# 	QMessageBox.warning(self, 'Error', 'Wrong username or password')
+
+		# for file in self.filenames:
+		# 	print(file[0])
+		# 	self.progBar.setValue(100)
 
 		
 # implementar servidor upload
