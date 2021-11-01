@@ -1,18 +1,16 @@
 import sys
 import time
 import requests
+import worker
 
 from PyQt5.QtCore import Qt, QThread
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QDialog
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QDialog, QListWidget
 from PyQt5.QtWidgets import QLabel, QLineEdit, QPushButton, QFileDialog, QTextEdit, QMessageBox, QProgressBar
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QFormLayout
 
 app = QApplication(sys.argv)
 
-
-# tela de login
-# usuário e senha
-
+# Login screen
 class LoginScreen(QDialog):
 	"""
 	Definition of the login screen.
@@ -55,96 +53,75 @@ class LoginScreen(QDialog):
 		else:
 			QMessageBox.warning(self, 'Error', 'Wrong username or password')
 
-		# if (self.username.text() == "username" and self.password.text() == "password"):
-		# 	print("Login successul!")
-		# 	self.accept()
-		# else:
-		# 	QMessageBox.warning(self, 'Error', 'Wrong username or password')
-
-# tela principal
-# botão para seleção do arquivo
-# botão para upload do arquivo
-# área para: lista de arquivos sendo feito o upload, a barra de progresso e uma previsão de término
-# opção para cancelar o upload
-
-# class MainWindow(QMainWindow):
+# Main screen
 class MainWindow(QWidget):
 
 	def __init__(self):
 		super().__init__()
 		self.setWindowTitle('Main Application')
+		self.resize(800,600)
 
-		# Select files to upload
+		# Files list
+		filesLayout = QGridLayout()
+		
+		self.filenames = []
+		self.filesList = QListWidget()
+		filesLayout.addWidget(self.filesList, 1, 0, 1, 2)
+		QListWidget.setFixedWidth(self.filesList,400)
+
+		# Upload section
+		layout = QVBoxLayout()
+
 		self.selectFileBtn = QPushButton("Open")
-		self.uploadButton = QPushButton("Begin upload")
-		
-		layout = QHBoxLayout()
-		layout.addWidget(QLabel("Select files:"))
-		layout.addWidget(self.selectFileBtn)
-		layout.addWidget(self.uploadButton)
-
-		# Upload status
-
-		self.thread = QThread()
-		
-		self.contents = QTextEdit()
+		self.uploadButton = QPushButton("Upload")
 		self.cancelButton = QPushButton("Cancel")
 		self.progBar = QProgressBar()
-
-		uploadLayout = QGridLayout()
-		uploadLayout.addWidget(QLabel("File name"), 0, 0)
-		uploadLayout.addWidget(QLabel("Progress"), 0, 1)
-		uploadLayout.addWidget(QLabel("Cancel upload"), 0, 2)
-
-		uploadLayout.addWidget(self.contents, 1, 0)
-		uploadLayout.addWidget(self.progBar, 1, 1)
-		uploadLayout.addWidget(self.cancelButton, 1, 2)
+		self.contents = QTextEdit()
 		
-		outerLayout = QVBoxLayout()
-		outerLayout.addLayout(layout)
-		outerLayout.addLayout(uploadLayout)
+		layout.addWidget(QLabel("Select files:"))
+		layout.addWidget(self.selectFileBtn)
+		layout.addWidget(self.contents)
+		layout.addWidget(self.uploadButton)
+		layout.addWidget(self.cancelButton)
+		layout.addWidget(self.progBar)
 
+		# Main layout
+		outerLayout = QHBoxLayout()
+		outerLayout.addLayout(filesLayout)
+		outerLayout.addLayout(layout)
 		self.setLayout(outerLayout)
 
-		# Direct buttons
+		# Configure buttons
 		self.selectFileBtn.clicked.connect(self.getFiles)
-		self.filenames = []
 		self.uploadButton.clicked.connect(self.uploadFile)
+		
+		# Handle upload
+		# self.obj = worker.Worker()
+		# self.thread = QThread()
+		# self.obj.intReady.connect(self.onIntReady)
 
 
 	def getFiles(self):
 		dlg = QFileDialog()
 		dlg.setFileMode(QFileDialog.AnyFile)
-		# dlg.setFilter("Text files (*.txt)")
 		if dlg.exec_():
 			self.filenames.append(dlg.selectedFiles())
-			self.contents.append(self.filenames[-1][0])		
+			self.contents.setText(self.filenames[-1][0])
+			self.filesList.addItems(self.filenames[-1])
 
 	def uploadFile(self):
 		print("Upload button clicked")
-		
 		url = "http://localhost:5000/upload"
 		uploadData = {
 			'file': self.filenames[-1][0]
 		}
-		print(self.filenames)
-		# r = requests.get(url, data = loginData)
-		print(uploadData)
-		r = requests.post(url, data = uploadData)
-
-		# if r.status_code == 200:
-		# 	print("Login successul!")
-		# 	self.accept()
-		# else:
-		# 	QMessageBox.warning(self, 'Error', 'Wrong username or password')
+		r = requests.post(url, files = uploadData)
 
 		# for file in self.filenames:
 		# 	print(file[0])
 		# 	self.progBar.setValue(100)
 
-		
-# implementar servidor upload
-
+# App
 login = LoginScreen()
 
 if login.exec_() == QDialog.Accepted:
@@ -152,10 +129,3 @@ if login.exec_() == QDialog.Accepted:
 	w.show()
 	sys.exit(app.exec_())
 
-# O aplicativo deverá estar sempre disponível no trackbar do windows (mesmo quando o aplicativo for fechado pela janela principal)
-# deverá haver um menu no trackbar do windows com a possibilidade de fechar o aplicativo
-
-# arquivo de dependências `requirements.txt` com as dependências utilizadas
-# código com um arquivo README.md com as instruções de execução
-
-# sys.exit(app.exec_())
