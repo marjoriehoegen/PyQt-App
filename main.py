@@ -1,9 +1,10 @@
 import sys
 import time
 import requests
-import worker
+import os
 
-from PyQt5.QtCore import Qt, QThread
+
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QObject
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QDialog, QListWidget
 from PyQt5.QtWidgets import QLabel, QLineEdit, QPushButton, QFileDialog, QTextEdit, QMessageBox, QProgressBar
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QFormLayout
@@ -78,7 +79,7 @@ class MainWindow(QWidget):
 		self.progBar = QProgressBar()
 		self.contents = QTextEdit()
 		
-		layout.addWidget(QLabel("Select files:"))
+		layout.addWidget(QLabel("Select file:"))
 		layout.addWidget(self.selectFileBtn)
 		layout.addWidget(self.contents)
 		layout.addWidget(self.uploadButton)
@@ -93,12 +94,11 @@ class MainWindow(QWidget):
 
 		# Configure buttons
 		self.selectFileBtn.clicked.connect(self.getFiles)
+
+		self.thread = UploadThread(filenames=self.filenames)
 		self.uploadButton.clicked.connect(self.uploadFile)
-		
-		# Handle upload
-		# self.obj = worker.Worker()
-		# self.thread = QThread()
-		# self.obj.intReady.connect(self.onIntReady)
+
+		self.cancelButton.clicked.connect(self.cancelUpload)
 
 
 	def getFiles(self):
@@ -110,16 +110,54 @@ class MainWindow(QWidget):
 			self.filesList.addItems(self.filenames[-1])
 
 	def uploadFile(self):
-		print("Upload button clicked")
+		self.thread.start()
+		# self.thread.progressChanged.connect(self.progBar.setValue)
+		
+	# def updateProgressBar(self):
+	# 	print("Update progress bar")
+
+		# self.progBar.setValue(val)
+
+		# for i in range(maxVal):
+		# 	self.progBar.setValue(self.progBar.value() + 1)
+		# 	time.sleep(1)
+		# 	maxVal = maxVal - 1
+		# 	if maxVal == 0:
+		# 		self.progBar.setValue(100)
+
+	def cancelUpload(self):
+		print("Cancel upload button clicked")
+		self.thread.terminate()
+		self.progBar.setValue(0)
+
+class UploadThread(QThread):
+	# progressChanged = pyqtSignal(int)
+	
+	def __init__(self, filenames, parent=None):
+		QThread.__init__(self, parent)
+		self.filenames = filenames	
+
+	def run(self):
+
+		print("Thread started")
 		url = "http://localhost:5000/upload"
+		fileToUpload = self.filenames[-1][0]
+		
+		# print(os.path.getsize(fileToUpload))
+
 		uploadData = {
-			'file': self.filenames[-1][0]
-		}
+			'file': fileToUpload
+		}			
 		r = requests.post(url, files = uploadData)
 
-		# for file in self.filenames:
-		# 	print(file[0])
-		# 	self.progBar.setValue(100)
+		# progressbar_value = 0
+		# while progressbar_value < 100:
+		# 	print(progressbar_value)
+		# 	self.progressChanged.emit(progressbar_value)
+		# 	time.sleep(0.1)
+		# 	progressbar_value += 1
+
+		# val = int(100 * monitor.bytes_read / monitor.len)
 
 # App
 login = LoginScreen()

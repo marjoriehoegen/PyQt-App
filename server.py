@@ -20,31 +20,21 @@ def loginHandler():
 # Function to upload files
 @app.route('/upload', methods=['POST'])
 def uploadFiles():
+	
 	# Path to save the files
 	dir_path = os.path.dirname(os.path.realpath(__file__))
 	upload_dest = os.path.join(dir_path,'uploads')
 	print(upload_dest)
 
 	if request.method == 'POST':
-		# files = request.files.getlist('filenames')
-
-		# até aqui ok
 		files = request.files['file']
-		# files = request.files.get('file')
-		
-		print(files)
-		print("ok")
 
 		for file in files:
-			print("entered for loop")
-			print(file)
-
 			with open(file, 'rb') as fp:
 				file = FileStorage(fp)
 				path_to_save = os.path.join(upload_dest, os.path.basename(file.filename))
 				file.save(path_to_save)
-			print("saved")
-
+				print("Upload sucessful!")
 		return "ok"
 
 
