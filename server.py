@@ -1,21 +1,18 @@
-from flask import Flask, request
+from flask import Flask, request, Response
 from werkzeug.datastructures import FileStorage
 import os
 
 app = Flask(__name__)
 
 # Function to handle login
-@app.route('/login',methods = ['GET', 'POST'])
+@app.route('/login',methods = ['POST'])
 def loginHandler():
-	if request.method == 'GET' and 'username' in request.form and 'password' in request.form:
-		username = request.form['username']
-		password = request.form['password']
-		if username != 'username' and password != 'password':
-			return 200
-		else:
-			return "Error"
+	username = request.form['username']
+	password = request.form['password']
+	if username == 'username' and password == 'password':
+		return "200"
 	else:
-		return "Error"
+		return Response("Login error", status=401)
 
 # Function to upload files
 @app.route('/upload', methods=['POST'])
@@ -24,7 +21,6 @@ def uploadFiles():
 	# Path to save the files
 	dir_path = os.path.dirname(os.path.realpath(__file__))
 	upload_dest = os.path.join(dir_path,'uploads')
-	print(upload_dest)
 
 	if request.method == 'POST':
 		files = request.files['file']
@@ -34,12 +30,7 @@ def uploadFiles():
 				file = FileStorage(fp)
 				path_to_save = os.path.join(upload_dest, os.path.basename(file.filename))
 				file.save(path_to_save)
-				print("Upload sucessful!")
 		return "ok"
-
-
-		# return redirect('/upload')
-
 
 
 if __name__ == '__main__':

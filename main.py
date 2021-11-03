@@ -1,11 +1,10 @@
 import sys
 import time
 import requests
-import os
-
 
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QObject
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QDialog, QListWidget
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QDialog, QListWidget, QSystemTrayIcon, QMenu, QAction
 from PyQt5.QtWidgets import QLabel, QLineEdit, QPushButton, QFileDialog, QTextEdit, QMessageBox, QProgressBar
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QFormLayout
 
@@ -32,12 +31,10 @@ class LoginScreen(QDialog):
 		layout.addWidget(QLabel('Password:'))
 		layout.addWidget(self.password)
 		layout.addWidget(self.loginButton)
-
 		self.setLayout(layout)
 		
 		# Button to handle login
 		self.loginButton.clicked.connect(self.handleLogin)
-
 
 	# Function to handle login
 	def handleLogin(self, checked):
@@ -46,16 +43,19 @@ class LoginScreen(QDialog):
 			'username': self.username.text(),
 			'password': self.password.text()
 		}
-		r = requests.get(url, data = loginData)
+		r = requests.post(url, data = loginData)
+		print(r.status_code)
 
 		if r.status_code == 200:
-			print("Login successul!")
 			self.accept()
 		else:
 			QMessageBox.warning(self, 'Error', 'Wrong username or password')
 
 # Main screen
 class MainWindow(QWidget):
+	"""
+	Definition of main screen to select and upload files.
+	"""
 
 	def __init__(self):
 		super().__init__()
@@ -76,7 +76,7 @@ class MainWindow(QWidget):
 		self.selectFileBtn = QPushButton("Open")
 		self.uploadButton = QPushButton("Upload")
 		self.cancelButton = QPushButton("Cancel")
-		self.progBar = QProgressBar()
+		# self.progBar = QProgressBar()
 		self.contents = QTextEdit()
 		
 		layout.addWidget(QLabel("Select file:"))
@@ -84,7 +84,7 @@ class MainWindow(QWidget):
 		layout.addWidget(self.contents)
 		layout.addWidget(self.uploadButton)
 		layout.addWidget(self.cancelButton)
-		layout.addWidget(self.progBar)
+		# layout.addWidget(self.progBar)
 
 		# Main layout
 		outerLayout = QHBoxLayout()
@@ -92,15 +92,46 @@ class MainWindow(QWidget):
 		outerLayout.addLayout(layout)
 		self.setLayout(outerLayout)
 
+		# Configure system tray
+		self.closeEvent = self.onClose
+		self.systemTray = QSystemTrayIcon()
+		self.systemTray.setContextMenu(QMenu(self))
+
+		self.tray = QSystemTrayIcon(QIcon("icon.png"), self)
+		self.trayMenu = QMenu(self)
+
+		actionShowWindow = QAction("Show main window", self)
+		actionShowWindow.triggered.connect(self.onShowMainWindow)
+		self.trayMenu.addAction(actionShowWindow)
+
+		actionExit = QAction("Exit", self)
+		actionExit.triggered.connect(app.exit)
+		self.trayMenu.addAction(actionExit)
+
+		self.tray.setContextMenu(self.trayMenu)
+		self.tray.activated.connect(self.onTrayActivated)
+		self.tray.show()
+
 		# Configure buttons
 		self.selectFileBtn.clicked.connect(self.getFiles)
-
 		self.thread = UploadThread(filenames=self.filenames)
 		self.uploadButton.clicked.connect(self.uploadFile)
-
 		self.cancelButton.clicked.connect(self.cancelUpload)
 
 
+	# System tray functions
+	def onClose(self, event):
+		self.tray.show()
+
+	def onShowMainWindow(self):
+		self.show()
+		self.tray.hide()
+
+	def onTrayActivated(self, event: QSystemTrayIcon.ActivationReason):
+		if event == QSystemTrayIcon.ActivationReason.Trigger:
+			self.onShowMainWindow()
+
+	# Functions to manage upload actions
 	def getFiles(self):
 		dlg = QFileDialog()
 		dlg.setFileMode(QFileDialog.AnyFile)
@@ -111,56 +142,32 @@ class MainWindow(QWidget):
 
 	def uploadFile(self):
 		self.thread.start()
-		# self.thread.progressChanged.connect(self.progBar.setValue)
-		
-	# def updateProgressBar(self):
-	# 	print("Update progress bar")
-
-		# self.progBar.setValue(val)
-
-		# for i in range(maxVal):
-		# 	self.progBar.setValue(self.progBar.value() + 1)
-		# 	time.sleep(1)
-		# 	maxVal = maxVal - 1
-		# 	if maxVal == 0:
-		# 		self.progBar.setValue(100)
 
 	def cancelUpload(self):
-		print("Cancel upload button clicked")
 		self.thread.terminate()
-		self.progBar.setValue(0)
 
 class UploadThread(QThread):
-	# progressChanged = pyqtSignal(int)
-	
+	"""
+	Definition of upload thread.
+	"""
+
 	def __init__(self, filenames, parent=None):
 		QThread.__init__(self, parent)
 		self.filenames = filenames	
 
 	def run(self):
-
-		print("Thread started")
 		url = "http://localhost:5000/upload"
 		fileToUpload = self.filenames[-1][0]
-		
-		# print(os.path.getsize(fileToUpload))
-
 		uploadData = {
 			'file': fileToUpload
 		}			
 		r = requests.post(url, files = uploadData)
 
-		# progressbar_value = 0
-		# while progressbar_value < 100:
-		# 	print(progressbar_value)
-		# 	self.progressChanged.emit(progressbar_value)
-		# 	time.sleep(0.1)
-		# 	progressbar_value += 1
-
-		# val = int(100 * monitor.bytes_read / monitor.len)
-
 # App
+
 login = LoginScreen()
+
+app.setQuitOnLastWindowClosed(False)
 
 if login.exec_() == QDialog.Accepted:
 	w = MainWindow()
